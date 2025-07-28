@@ -99,9 +99,26 @@ install_docker() {
 }
 
 install_compose_v2() {
+  local os_id="$1"
+  local arch="$2"
+  
+  # Skip installation on macOS - Docker Desktop includes Compose
+  if [[ "$os_id" == "macos" ]]; then
+    yellow "ℹ️  Skipping Docker Compose installation on macOS (included with Docker Desktop)"
+    return 0
+  fi
+  
+  # Map architecture for Docker Compose binary names
+  local compose_arch
+  case "$arch" in
+    arm) compose_arch="aarch64" ;;
+    x86) compose_arch="x86_64" ;;
+    *) red "❌ Unsupported architecture for Docker Compose: $arch"; exit 1 ;;
+  esac
+  
   local plugin_dir="/usr/local/lib/docker/cli-plugins"
   sudo mkdir -p "$plugin_dir"
-  sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+  sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${compose_arch}" \
     -o "$plugin_dir/docker-compose"
   sudo chmod +x "$plugin_dir/docker-compose"
 }
@@ -146,7 +163,7 @@ fi
 if ! docker compose version >/dev/null 2>&1; then
   red "❌ Docker Compose v2 not found."
   if confirm "Install Compose v2?"; then
-    install_compose_v2
+    install_compose_v2 "$OS_ID" "$ARCH"
     green "✅ Compose v2 installed."
   else
     red "Compose is required. Aborting."
